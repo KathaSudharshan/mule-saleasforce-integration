@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="5e4f2b6e-6da2-4e24-8c73-0a7c7547555c" >
+		<salesforce:basic-connection username="*******" password="****" securityToken="**********" />
+	</salesforce:sfdc-config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="68252e95-043b-475a-8d36-c10fbc833a10" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<flow name="mule-saleasforce-integrationFlow" doc:id="4dcc51cc-71b7-4cb7-908b-857a13656675" >
+		<http:listener doc:name="Listener" doc:id="d4126d4b-6aeb-4919-9c26-6a3c4b76c5cf" config-ref="HTTP_Listener_config" path="/sfdc"/>
+		<salesforce:query doc:name="Query" doc:id="23227a38-3d71-41ae-8ceb-7816741fdacf" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[select Id, IsDeleted, MasterRecordId, Name, Type, ParentId, BillingStreet, AccountNumber, Phone, Website from Account limit 25]]></salesforce:salesforce-query>
+		</salesforce:query>
+		<ee:transform doc:name="Transform Message" doc:id="5c45837e-05b1-4848-95ce-69827b1ab0cf" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="mule-saleasforce-integrationFlow2" doc:id="bc30149f-c99b-4ce2-8f43-c4ce7ddb95b4" >
+		<http:listener doc:name="Listener" doc:id="6dc736da-fdf3-4167-a42b-756bc3118717" config-ref="HTTP_Listener_config" path="/sfdc/queryall"/>
+		<salesforce:query-all doc:name="Query all" doc:id="197a5caf-1716-4f57-8869-1e89e1e676b9" config-ref="Salesforce_Config">
+			<salesforce:salesforce-query ><![CDATA[select Id, IsDeleted, Description, MasterRecordId, Name, Type, ParentId, BillingStreet, AccountNumber, Phone, Website from Account]]></salesforce:salesforce-query>
+		</salesforce:query-all>
+		<ee:transform doc:name="Transform Message" doc:id="6edb03f2-2d8b-4cd8-ac0e-b4cced68b3f3" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	count: sizeOf(payload),
+	list: payload
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="mule-saleasforce-integrationFlow1" doc:id="2b33c85e-5f17-4834-8bbc-c0264ffc8beb" >
+		<http:listener doc:name="Listener" doc:id="f467db0f-184d-47b2-8513-b529368e15e7" config-ref="HTTP_Listener_config" path="/sfdc/retrive"/>
+		<ee:transform doc:name="Transform Message" doc:id="5af448b2-c8b2-445a-8e09-ad71e19653cd">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+			<ee:set-variable variableName="id"><![CDATA[%dw 2.0
+output application/java
+---
+['001WS000003fOvuYAE']]]></ee:set-variable>
+			<ee:set-variable variableName="FieldList"><![CDATA[%dw 2.0
+output application/java
+---
+['Id, IsDeleted, MasterRecordId, Name, Type, ParentId, BillingStreet, AccountNumber, Phone, Website']]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<salesforce:retrieve type="Account" doc:name="Retrieve" doc:id="8f552f7a-646a-4ffe-9321-e180cea27a23" config-ref="Salesforce_Config">
+			<salesforce:retrieve-request ><![CDATA[#[{
+	ids: vars.id,
+	fields: vars.FieldList 
+}]]]></salesforce:retrieve-request>
+		</salesforce:retrieve>
+		<ee:transform doc:name="Transform Message" doc:id="8f68ee50-5845-4b09-b07a-152de2d427f6" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
